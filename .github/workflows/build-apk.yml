@@ -1,0 +1,67 @@
+name: Build APK (netplay)
+
+# Se ejecuta a mano: pestaña Actions > "Build APK (netplay)" > Run workflow.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Descomprimir el proyecto
+        run: |
+          unzip -q smstrikers-port-netplay.zip
+          ls smstrikers-port | head -20
+
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Herramientas
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      # Prueba rapida del protocolo de red con un juego simulado. No bloquea el build.
+      - name: Prueba del netplay
+        continue-on-error: true
+        working-directory: smstrikers-port
+        run: sh tests/netplay/run.sh 0.1
+
+      - name: Android SDK y NDK 29.0.14206865
+        run: |
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" "ndk;29.0.14206865" "platforms;android-35" "build-tools;35.0.1"
+
+      - name: Compilar el juego (nativo)
+        working-directory: smstrikers-port
+        run: sh tools/build-android.sh
+
+      - name: Empaquetar el APK
+        working-directory: smstrikers-port/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Guardar el APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: strikers-netplay-apk
+          path: smstrikers-port/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Guardar los logs si fallo
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-de-error
+          path: |
+            smstrikers-port/build-android/compile.log
+            smstrikers-port/build-android/CMakeFiles/CMakeConfigureLog.yaml
+          if-no-files-found: ignore
