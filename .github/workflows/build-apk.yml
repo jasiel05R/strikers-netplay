@@ -38,6 +38,13 @@ jobs:
           SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           yes | "$SDKM" --licenses > /dev/null || true
           "$SDKM" "ndk;29.0.14206865" "platforms;android-35" "build-tools;35.0.1"
+          NDK="$ANDROID_HOME/ndk/29.0.14206865"
+          test -d "$NDK/toolchains/llvm/prebuilt/linux-x86_64" || { echo "La NDK 29 no se instalo"; ls "$ANDROID_HOME/ndk"; exit 1; }
+          # El servidor trae ANDROID_NDK_HOME apuntando a su propia NDK 27, y build-android.sh la
+          # obedece (la 27 no compila este codigo). Se apunta a la 29.
+          echo "ANDROID_NDK_HOME=$NDK" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$NDK" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK=$NDK" >> "$GITHUB_ENV"
 
       - name: Compilar el juego (nativo)
         working-directory: smstrikers-port
