@@ -17,6 +17,17 @@ jobs:
           unzip -q smstrikers-port-netplay.zip
           ls smstrikers-port | head -20
 
+      # Otro identificador y otro nombre: se instala junto al Strikers original sin pisarlo ni
+      # desinstalarlo. Los datos del juego (/Strikers) son los mismos para las dos apps.
+      - name: Cambiar el nombre de la app
+        working-directory: smstrikers-port/android/app
+        run: |
+          sed -i "s/applicationId 'io.github.newcoke.strikers'/applicationId 'io.github.newcoke.strikers.netplay'/" build.gradle
+          sed -i 's|<string name="app_name" translatable="false">Super Mario Strikers</string>|<string name="app_name" translatable="false">Strikers Netplay</string>|' src/main/res/values/strings.xml
+          grep -q "strikers.netplay'" build.gradle
+          grep -q "Strikers Netplay" src/main/res/values/strings.xml
+          grep -n "applicationId" build.gradle
+
       - name: Java 17
         uses: actions/setup-java@v4
         with:
